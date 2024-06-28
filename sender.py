@@ -10,11 +10,11 @@ load_dotenv()
 
 def send_icfp_request(icfp_program, authorization_token):
     url = 'https://boundvariable.space/communicate'
-    encoded_message = "S'%4}).$%8" #encode_message(icfp_program)
+    encoded_message = encode_message(icfp_program)
     print(f'Encoded message: `{encoded_message}`')
     headers = {
         'Authorization': f'Bearer {authorization_token}',
-        'Content-Type': 'application/json'
+        #'Content-Type': 'application/json'
     }
     payload = {
         'message': encode_message(icfp_program)
