@@ -1,33 +1,27 @@
+#!/usr/bin/env python3
+
 import os
+import sys
 from dotenv import load_dotenv
 import requests
-from interpreter import ICFPInterpreter
-from encoder import encode_message, encode_string
-
-# Load environment variables from .env file
-load_dotenv()
 
 
-def send_icfp_request(icfp_program, authorization_token):
-    url = 'https://boundvariable.space/communicate'
-    encoded_message = encode_message(icfp_program)
-    print(f'Encoded message: `{encoded_message}`')
+def send_icfp_request(encoded_program, authorization_token):
+    url = "https://boundvariable.space/communicate"
     headers = {
-        'Authorization': f'Bearer {authorization_token}',
+        "Authorization": f"Bearer {authorization_token}",
         #'Content-Type': 'application/json'
     }
-    
-    response = requests.post(url, headers=headers, data=encode_message(icfp_program))
-    if response.status_code != 200:
-        print('Response error!', response.status_code, '\n', response.text)
-        return None
-    else:
-        return ICFPInterpreter(response.text.strip()).evaluate()
+
+    response = requests.post(url, headers=headers, data=encoded_program)
+    response.raise_for_status()
+    return response.text.strip()
 
 
-if __name__ == '__main__':
-    icfp_program = [
-        encode_string('get index')
-    ]
-    print('Returned', send_icfp_request(icfp_program, os.getenv('ACCESS_TOKEN')))
-    
+if __name__ == "__main__":
+    program = sys.stdin.read().strip()
+
+    # Load environment variables from .env file
+    load_dotenv()
+
+    print(send_icfp_request(program, os.getenv("ACCESS_TOKEN")))
