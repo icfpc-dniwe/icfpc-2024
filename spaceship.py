@@ -66,9 +66,14 @@ def parse_point(line):
     return tuple(int(p) for p in line.split())
 
 
-if __name__ == '__main__':
-    filename = sys.stdin.read().strip()
+def solve_file(filename):
     with open(filename) as f:
         target_squares = [parse_point(line.strip()) for line in f if len(line) > 2]
     result = spaceship_moves(target_squares)
+    return result
+
+
+if __name__ == '__main__':
+    filename = sys.stdin.read().strip()
+    result = solve_file(filename)
     print(result)
