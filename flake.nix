@@ -2,26 +2,53 @@
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
     flake-utils.url = "github:numtide/flake-utils";
-    poetry2nix.url = "github:nix-community/poetry2nix";
+    poetry2nix.url = "github:nix-community/poetry2nix/master";
   };
 
-  outputs = {
+  outputs = inputs @ {
     self,
     nixpkgs,
     flake-utils,
     poetry2nix,
-  }:
-    {
-      overlays.default = final: prev: {
-        icfpc-2024 = final.python3.pkgs.callPackage ./. {};
+    ...
+  }: let
+    env = {
+      lib,
+      buildFHSEnv,
+      writers,
+    }:
+    # Move that to NixOverlay later.
+      buildFHSEnv {
+        name = "icfpc2024_env";
+
+        targetPkgs = pkgs:
+          with pkgs; [
+            python3
+            poetry
+            # Native dependencies for the Python libraries.
+            zlib
+          ];
+
+        profile = ''
+          poetry install --with dev
+	  source $(poetry env info --path)/bin/activate
+        '';
+
+        runScript = writers.writeBash "run-script" ''
+          if [ "$#" = 0 ]; then
+            exec "$SHELL"
+          else
+            exec "$@"
+          fi
+        '';
       };
-    }
-    // flake-utils.lib.eachDefaultSystem (system: let
+  in
+    flake-utils.lib.eachDefaultSystem (system: let
       pkgs = import nixpkgs {
         inherit system;
-        overlays = [poetry2nix.overlays.default self.overlays.default];
+        overlays = [poetry2nix.overlays.default];
       };
     in {
-      packages.default = pkgs.icfpc-2024;
+      devShells.default = (pkgs.callPackage env {}).env;
     });
 }
