@@ -16,11 +16,8 @@ def send_icfp_request(icfp_program, authorization_token):
         'Authorization': f'Bearer {authorization_token}',
         #'Content-Type': 'application/json'
     }
-    payload = {
-        'message': encode_message(icfp_program)
-    }
     
-    response = requests.post(url, headers=headers, data=payload)
+    response = requests.post(url, headers=headers, data=encode_message(icfp_program))
     if response.status_code != 200:
         print('Response error!', response.status_code, '\n', response.text)
         return None
