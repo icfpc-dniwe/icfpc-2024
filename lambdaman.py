@@ -1,3 +1,4 @@
+import sys
 from collections import deque
 
 
@@ -47,10 +48,13 @@ def lambda_man_path(grid):
     return "No solution found"
 
 
-# Example usage
-grid = [
-    "###.#...",
-    "...L..##",
-    ".#######"
-]
-print(lambda_man_path(grid))
+def solve_file(filename):
+    with open(filename) as f:
+        grid = [line.strip() for line in f if len(line) > 2]
+    return lambda_man_path(grid)
+
+
+if __name__ == '__main__':
+    filename = sys.stdin.read().strip()
+    result = solve_file(filename)
+    print(result)
