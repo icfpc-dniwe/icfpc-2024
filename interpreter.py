@@ -2,8 +2,7 @@
 
 from typing import Any, Callable
 import sys
-from dataclasses import dataclass
-from frozendict import frozendict
+from dataclasses import dataclass, field
 from abc import abstractmethod
 
 
@@ -45,18 +44,24 @@ def encode_integer(num: int) -> str:
 
 
 # Variables are actually expressions which are recomputed each time they are used.
-Variables = frozendict[int, "Variable"]
+Variables = dict[int, "Thunk | EvaledVariable"]
 
 
 @dataclass
-class Variable:
+class Thunk:
     capture: Variables
     body: "Expression"
 
 
+@dataclass
+class EvaledVariable:
+    value: Any
+    beta_reduction_count: int
+
+
 @dataclass(kw_only=True)
 class Context:
-    variables: Variables = frozendict()
+    variables: Variables = field(default_factory=dict)
     beta_reduction_count: int = 0
     trace: bool = False
 
@@ -174,15 +179,22 @@ class VariableRef(Expression):
             var = ctx.variables[self.variable]
         except KeyError as e:
             raise ValueError(f"Variable with identifier {self.variable} not defined") from e
-        old_variables = ctx.variables
-        try:
-            ctx.variables = var.capture
-            ret = var.body(ctx)
-            if ctx.trace:
-                print(f"Exiting variable reference {self.variable}, result: {ret}")
-            return ret
-        finally:
-            ctx.variables = old_variables
+        match var:
+            case Thunk():
+                old_variables = ctx.variables
+                old_beta_reduction_count = ctx.beta_reduction_count
+                try:
+                    ctx.variables = var.capture
+                    ret = var.body(ctx)
+                    old_variables[self.variable] = EvaledVariable(ret, ctx.beta_reduction_count - old_beta_reduction_count)
+                    if ctx.trace:
+                        print(f"Exiting variable reference {self.variable}, result: {ret}")
+                    return ret
+                finally:
+                    ctx.variables = old_variables
+            case EvaledVariable():
+                ctx.beta_reduction_count += var.beta_reduction_count
+                return var.value
 
     def __repr__(self) -> str:
         return f"VariableRef({self.variable})"
@@ -383,9 +395,11 @@ class BinaryApply(BinaryOp):
         # We restore the variables for evaluation of the argument.
         variable = Variable(ctx.variables, self.y)
         ctx.beta_reduction_count += 1
+        variables = x.capture.copy()
+        variables[x.variable] = variable
         old_variables = ctx.variables
         try:
-            ctx.variables = x.capture.set(x.variable, variable)
+            ctx.variables = variables
             ret = x.body(ctx)
             if ctx.trace:
                 print(f"Exiting binary apply, result: {ret}")

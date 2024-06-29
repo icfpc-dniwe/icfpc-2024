@@ -1,0 +1,59 @@
+name:                icfpc2024
+version:             0.1.0.0
+github:              "icfpc-dniwe/icfpc2024"
+license:             BSD-3-Clause
+author:              "DNIWE :: a"
+
+dependencies:
+- base >= 4.7 && < 5
+- bytestring >= 0.11
+- megaparsec >= 9.5
+- mtl >= 2.3
+- unordered-containers >= 0.2.19
+
+ghc-options:
+- -Wall
+
+default-extensions:
+- OverloadedStrings
+- FlexibleContexts
+- ConstraintKinds
+- TypeOperators
+- LambdaCase
+- RankNTypes
+- RecordWildCards
+
+library:
+  source-dirs: src
+
+executables:
+  interpreter:
+    main: Interpreter.hs
+    source-dirs: app
+    other-modules: []
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - icfpc2024
+
+  string-encoder:
+    main: StringEncoder.hs
+    source-dirs: app
+    other-modules: []
+    ghc-options:
+    - -threaded
+    - -rtsopts
+    - -with-rtsopts=-N
+    dependencies:
+    - icfpc2024
+
+tests:
+  encoding:
+    main: Encoding.hs
+    source-dirs: test
+    other-modules: []
+    dependencies:
+      - icfpc2024
+      - HTF >= 0.15

@@ -1,0 +1,117 @@
+cabal-version: 2.2
+
+-- This file has been generated from package.yaml by hpack version 0.36.0.
+--
+-- see: https://github.com/sol/hpack
+
+name:           icfpc2024
+version:        0.1.0.0
+homepage:       https://github.com/icfpc-dniwe/icfpc2024#readme
+bug-reports:    https://github.com/icfpc-dniwe/icfpc2024/issues
+author:         DNIWE :: a
+maintainer:     DNIWE :: a
+license:        BSD-3-Clause
+build-type:     Simple
+
+source-repository head
+  type: git
+  location: https://github.com/icfpc-dniwe/icfpc2024
+
+library
+  exposed-modules:
+      ICFP.AST
+      ICFP.Encoding.Decode
+      ICFP.Encoding.Encode
+      ICFP.Encoding.Utils
+      ICFP.Evaluate
+      ICFP.Operators
+  other-modules:
+      Paths_icfpc2024
+  autogen-modules:
+      Paths_icfpc2024
+  hs-source-dirs:
+      src
+  default-extensions:
+      OverloadedStrings
+      FlexibleContexts
+      ConstraintKinds
+      TypeOperators
+      LambdaCase
+      RankNTypes
+      RecordWildCards
+  ghc-options: -Wall
+  build-depends:
+      base >=4.7 && <5
+    , bytestring >=0.11
+    , megaparsec >=9.5
+    , mtl >=2.3
+    , unordered-containers >=0.2.19
+  default-language: Haskell2010
+
+executable interpreter
+  main-is: Interpreter.hs
+  hs-source-dirs:
+      app
+  default-extensions:
+      OverloadedStrings
+      FlexibleContexts
+      ConstraintKinds
+      TypeOperators
+      LambdaCase
+      RankNTypes
+      RecordWildCards
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , bytestring >=0.11
+    , icfpc2024
+    , megaparsec >=9.5
+    , mtl >=2.3
+    , unordered-containers >=0.2.19
+  default-language: Haskell2010
+
+executable string-encoder
+  main-is: StringEncoder.hs
+  hs-source-dirs:
+      app
+  default-extensions:
+      OverloadedStrings
+      FlexibleContexts
+      ConstraintKinds
+      TypeOperators
+      LambdaCase
+      RankNTypes
+      RecordWildCards
+  ghc-options: -Wall -threaded -rtsopts -with-rtsopts=-N
+  build-depends:
+      base >=4.7 && <5
+    , bytestring >=0.11
+    , icfpc2024
+    , megaparsec >=9.5
+    , mtl >=2.3
+    , unordered-containers >=0.2.19
+  default-language: Haskell2010
+
+test-suite encoding
+  type: exitcode-stdio-1.0
+  main-is: Encoding.hs
+  hs-source-dirs:
+      test
+  default-extensions:
+      OverloadedStrings
+      FlexibleContexts
+      ConstraintKinds
+      TypeOperators
+      LambdaCase
+      RankNTypes
+      RecordWildCards
+  ghc-options: -Wall
+  build-depends:
+      HTF >=0.15
+    , base >=4.7 && <5
+    , bytestring >=0.11
+    , icfpc2024
+    , megaparsec >=9.5
+    , mtl >=2.3
+    , unordered-containers >=0.2.19
+  default-language: Haskell2010
