@@ -131,7 +131,6 @@ class ICFPInterpreter:
 
     def parse_lambda(self, body):
         var_num = self.parse_integer(body)
-        print(var_num)
         body_expr = self.parse()
         # In this simple interpreter, we ignore the lambda abstraction
         return body_expr
