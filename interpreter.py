@@ -3,6 +3,9 @@ class ICFPInterpreter:
         self.tokens = program.split()
         self.current_token = 0
         self.beta_reduction_count = 0  # To track beta reductions
+        self.translation_order = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n"
+        self.char2int = {ch: idx for idx, ch in enumerate(self.translation_order)}
+        self.variables = {}
     
     def parse(self):
         if self.current_token >= len(self.tokens):
@@ -27,18 +30,38 @@ class ICFPInterpreter:
         elif token[0] == 'L':
             return self.parse_lambda(token[1:])
         elif token[0] == 'v':
-            return int(token[1:])  # Variable identifier
+            return self.var(self.parse_integer(token[1:]))  # Variable identifier
     
-    def parse_integer(self, body):
+    def var(self, identifier):
+        self.variables[identifier] = None
+        return None, identifier
+    
+    def parse_integer(self, body, other_order=False):
         base94_digits = body
         num = 0
+        if other_order:
+            translate = lambda x: self.char2int[x]
+        else:
+            translate = lambda x: ord(x) - 33
         for char in base94_digits:
-            num = num * 94 + (ord(char) - 33)
+            num = num * 94 + translate(char)
         return num
     
+    def to_base94(self, num):
+        num94 = []
+        while num > 0:
+            num94 = [num % 94] + num94
+            num = num // 94
+        if len(num94) < 1:
+            num94 = [0]
+        return num94
+    
+    def num2str(self, num):
+        num94 = self.to_base94(num)
+        return ''.join(self.translation_order[idx] for idx in num94)
+    
     def parse_string(self, body):
-        translation_order = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!\"#$%&'()*+,-./:;<=>?@[\\]^_`|~ \n"
-        return ''.join(translation_order[ord(char) - 33] for char in body)
+        return ''.join(self.translation_order[ord(char) - 33] for char in body)
     
     def parse_unary_op(self, body):
         op = body[0]
@@ -48,9 +71,9 @@ class ICFPInterpreter:
         elif op == '!':
             return not arg
         elif op == '#':
-            return self.parse_integer(str(arg))
+            return self.parse_integer(arg, True)
         elif op == '$':
-            return self.parse_string(str(arg))
+            return self.num2str(arg)
     
     def parse_binary_op(self, body):
         op = body[0]
@@ -96,6 +119,7 @@ class ICFPInterpreter:
     
     def parse_lambda(self, body):
         var_num = self.parse_integer(body)
+        print(var_num)
         body_expr = self.parse()
         # In this simple interpreter, we ignore the lambda abstraction
         return body_expr
@@ -114,7 +138,7 @@ class ICFPInterpreter:
 
 # Example usage:
 if __name__ == "__main__":
-    program = "SJ!23%}%22/2n}O.%80%#4%$}#(!2!#4%2}ee}!4}).$%8}U"
+    program = "B$ B$ L# L$ v# B. SB%,,/ S}Q/2,$_ IK"
     interpreter = ICFPInterpreter(program)
     try:
         result = interpreter.evaluate()

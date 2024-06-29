@@ -20,7 +20,7 @@ def send_icfp_request(icfp_program, authorization_token):
         'message': encode_message(icfp_program)
     }
     
-    response = requests.post(url, headers=headers, json=payload)
+    response = requests.post(url, headers=headers, data=payload)
     if response.status_code != 200:
         print('Response error!', response.status_code, '\n', response.text)
         return None
