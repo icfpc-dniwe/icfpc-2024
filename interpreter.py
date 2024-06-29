@@ -61,7 +61,13 @@ class ICFPInterpreter:
         return ''.join(self.translation_order[idx] for idx in num94)
     
     def parse_string(self, body):
-        return ''.join(self.translation_order[ord(char) - 33] for char in body)
+        def self_translate(ch):
+            idx = ord(ch) - 33
+            if idx < 0 or idx >= len(self.translation_order):
+                return ch
+            else:
+                return self.translation_order[idx]
+        return ''.join(self_translate(char) for char in body)
     
     def parse_unary_op(self, body):
         op = body[0]
