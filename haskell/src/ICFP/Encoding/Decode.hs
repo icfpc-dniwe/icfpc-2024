@@ -7,9 +7,7 @@ import Data.Functor (($>))
 import Control.Applicative ((<|>), optional)
 import Data.Word (Word8)
 import Text.Megaparsec
-    ( (<|>),
-      optional,
-      (<?>),
+    ( (<?>),
       runParser,
       satisfy,
       errorBundlePretty,

@@ -1,7 +1,5 @@
 import qualified Data.ByteString.Char8 as BS
 
-import System.IO (hPrint, stderr)
-
 import ICFP.Encoding.Decode (parseIcfpExpression)
 import ICFP.AST (Value(VString))
 
@@ -14,7 +12,6 @@ main = do
   case parseIcfpExpression rawExpr of
     Left err -> fail $ "Parse error: " ++ err
     Right expr -> do
-      hPrint stderr expr
       case evaluateTopLevel icfpOperators expr of
         Left err -> fail $ "Evaluation error: " ++ show err
         Right (EvalResult { evalValue = VString str }) -> BS.putStrLn str

@@ -12,7 +12,6 @@ _CHARACTER_END = 126
 _CHARACTER_COUNT = _CHARACTER_END - _CHARACTER_START + 1
 assert len(_TRANSLATION_ORDER) == _CHARACTER_COUNT
 
-
 def decode_string(body: str) -> str:
     def self_translate(ch: str) -> str:
         idx = ord(ch) - _CHARACTER_START
