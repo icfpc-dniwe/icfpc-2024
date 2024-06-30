@@ -4,6 +4,7 @@ import ICFP.Encoding.Decode (parseIcfpExpression)
 import ICFP.Operators (icfpOperators)
 import ICFP.Evaluate (evaluateTopLevel, EvalResult (EvalResult, evalValue))
 import ICFP.AST (Value(VString))
+import System.IO (hPrint, stderr)
 
 main :: IO ()
 main = do
@@ -11,7 +12,7 @@ main = do
   case parseIcfpExpression rawExpr of
     Left err -> fail $ "Parse error: " ++ err
     Right expr -> do
-      print expr
+      hPrint stderr expr
       case evaluateTopLevel icfpOperators expr of
         Left err -> fail $ "Evaluation error: " ++ show err
         Right (EvalResult { evalValue = VString val }) -> BS.putStrLn val
