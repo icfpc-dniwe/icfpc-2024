@@ -1,4 +1,4 @@
-module ICFP.Operators
+module ICFP.Evaluate.Operators
   ( unaryOps
   , binaryOps
   , icfpOperators

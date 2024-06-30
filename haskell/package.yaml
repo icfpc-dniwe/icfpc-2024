@@ -11,6 +11,10 @@ dependencies:
 - mtl >= 2.3
 - unordered-containers >= 0.2.19
 - monad-st >= 0.2
+- aeson >= 2.0
+- text >= 2.0
+- interpolatedstring-perl6 >= 1.0.0
+- process >= 1.6
 
 ghc-options:
 - -Wall
@@ -28,6 +32,8 @@ default-extensions:
 - DeriveFunctor
 - DeriveFoldable
 - DeriveTraversable
+- QuasiQuotes
+- BangPatterns
 
 library:
   source-dirs: src

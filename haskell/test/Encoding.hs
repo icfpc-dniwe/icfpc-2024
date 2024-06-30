@@ -7,6 +7,7 @@ import Test.Framework
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Lazy as BL
 import qualified Data.ByteString.Builder as BB
+import Text.InterpolatedString.Perl6 (q)
 
 import ICFP.AST
 import ICFP.Encoding.Decode (parseIcfpExpression)
@@ -23,7 +24,7 @@ test_basic = testDecoding "S'%4}).$%8" (EValue (VString "get index"))
 -- Checked by hand.
 test_lambdaman6 :: IO ()
 test_lambdaman6 = testDecoding lambdaman6 lambdaman6Tree
-  where lambdaman6 = "B. SF B$ B$ L\" B$ L\" B$ L# B$ v\" B$ v# v# L# B$ v\" B$ v# v# L$ L# ? B= v# I\" v\" B. v\" B$ v$ B- v# I\" Sl I#,"
+  where lambdaman6 = [q|B. SF B$ B$ L" B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L$ L# ? B= v# I" v" B. v" B$ v$ B- v# I" Sl I#,|]
         lambdaman6Tree =
           EBinary '.'
           (EValue (VString "L"))

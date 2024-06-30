@@ -1,5 +1,6 @@
-{ mkDerivation, base, bytestring, dotenv, HTF, lib, megaparsec
-, monad-st, mtl, unordered-containers, wreq
+{ mkDerivation, aeson, base, bytestring, dotenv, hpack, HTF
+, http-client, interpolatedstring-perl6, lens, lib, megaparsec
+, monad-st, mtl, process, text, unordered-containers, wreq
 }:
 mkDerivation {
   pname = "icfpc2024";
@@ -8,15 +9,19 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base bytestring megaparsec monad-st mtl unordered-containers
+    aeson base bytestring interpolatedstring-perl6 megaparsec monad-st
+    mtl process text unordered-containers
   ];
+  libraryToolDepends = [ hpack ];
   executableHaskellDepends = [
-    base bytestring dotenv megaparsec monad-st mtl unordered-containers
-    wreq
+    aeson base bytestring dotenv http-client interpolatedstring-perl6
+    lens megaparsec monad-st mtl process text unordered-containers wreq
   ];
   testHaskellDepends = [
-    base bytestring HTF megaparsec monad-st mtl unordered-containers
+    aeson base bytestring HTF interpolatedstring-perl6 megaparsec
+    monad-st mtl process text unordered-containers
   ];
+  prePatch = "hpack";
   homepage = "https://github.com/icfpc-dniwe/icfpc2024#readme";
   license = lib.licenses.bsd3;
 }
