@@ -22,7 +22,7 @@ appPrec = 10
 showsLambda :: (Show ctx', Show ctx) => Int -> ctx' -> Int -> Expression ctx -> ShowS
 showsLambda p _ctx arg body =
   showParen (p > appPrec) $
-    showString "L " .
+    showString "L." .
     showsPrec (appPrec + 1) arg .
     showChar ' ' .
     showsPrec (appPrec + 1) body

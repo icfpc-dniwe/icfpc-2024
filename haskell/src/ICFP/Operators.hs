@@ -72,12 +72,12 @@ binaryMultiply = strictBinaryOp '*' $ \case
 
 binaryDivide :: BinaryOpPair
 binaryDivide = strictBinaryOp '/' $ \case
-  (VInt i1, VInt i2) -> return $ VInt (i1 `div` i2)
+  (VInt i1, VInt i2) -> return $ VInt (i1 `quot` i2)
   (arg1, arg2) -> throwError $ "binaryDivide: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
 
 binaryModulo :: BinaryOpPair
 binaryModulo = strictBinaryOp '%' $ \case
-  (VInt i1, VInt i2) -> return $ VInt (i1 `mod` i2)
+  (VInt i1, VInt i2) -> return $ VInt (i1 `rem` i2)
   (arg1, arg2) -> throwError $ "binaryModulo: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
 
 binaryLessThan :: BinaryOpPair
