@@ -1,5 +1,5 @@
-{ mkDerivation, base, bytestring, HTF, lib, megaparsec, monad-st
-, mtl, unordered-containers
+{ mkDerivation, base, bytestring, dotenv, HTF, lib, megaparsec
+, monad-st, mtl, unordered-containers, wreq
 }:
 mkDerivation {
   pname = "icfpc2024";
@@ -11,7 +11,8 @@ mkDerivation {
     base bytestring megaparsec monad-st mtl unordered-containers
   ];
   executableHaskellDepends = [
-    base bytestring megaparsec monad-st mtl unordered-containers
+    base bytestring dotenv megaparsec monad-st mtl unordered-containers
+    wreq
   ];
   testHaskellDepends = [
     base bytestring HTF megaparsec monad-st mtl unordered-containers
