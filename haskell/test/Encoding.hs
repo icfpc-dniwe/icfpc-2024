@@ -1,5 +1,7 @@
 {-# OPTIONS_GHC -F -pgmF htfpp #-}
 
+module Encoding where
+
 import Data.Word (Word8)
 import Test.Framework
 import qualified Data.ByteString as BS
@@ -52,7 +54,6 @@ test_lambdaman6 = testDecoding lambdaman6 lambdaman6Tree
            (EValue (VInt 199))
           )
 
-
 encodeableChar :: Gen Word8
 encodeableChar = elements (BS.unpack stringAlphabet)
 
@@ -66,5 +67,9 @@ prop_stringsRoundRobin = forAll encodeableString $ \str ->
        Right (EValue (VString decoded)) | decoded == str -> True
        e -> error $ "Unexpected result: " ++ show e
 
-main :: IO ()
-main = htfMain htf_thisModulesTests
+prop_intsRoundRobin :: Property
+prop_intsRoundRobin = forAll arbitrary $ \(NonNegative i) ->
+    let encoded = BL.toStrict $ BB.toLazyByteString $ encodeValue (VInt i)
+  in case parseIcfpExpression encoded :: Either String (Expression Void) of
+       Right (EValue (VInt decoded)) | decoded == i -> True
+       e -> error $ "Unexpected result: " ++ show e

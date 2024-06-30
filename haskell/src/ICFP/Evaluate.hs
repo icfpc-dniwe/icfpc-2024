@@ -158,6 +158,8 @@ evaluate (EApply strategy lambda argVal) = do
   case lambdaV of
     VLambda closure arg body -> do
       MonadEval $ modify $ \s -> s { icfpBetaReductions = icfpBetaReductions s + 1 }
+      reductions <- MonadEval $ gets icfpBetaReductions
+      when (reductions > 10000) $ throwError $ "evaluate: too many beta reductions, current expr:\n" ++ show lambdaV ++ "\narg:\n" ++ show argVal
       var <-
         case strategy of
           CallByValue -> EVVByValue <$> evaluate argVal

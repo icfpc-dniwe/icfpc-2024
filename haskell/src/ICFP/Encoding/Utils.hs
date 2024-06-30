@@ -55,8 +55,8 @@ encodeInteger' :: Int -> BB.Builder
 encodeInteger' 0 = BB.word8 validTokenStart
 encodeInteger' int0 = encode int0
   where encode 0 = mempty
-        encode i = encode nextI <> BB.word8 (fromIntegral c + validTokenStart)
-          where (c, nextI) = i `divMod` fromIntegral validTokenBase
+        encode int = encode nextInt <> BB.word8 (fromIntegral digit + validTokenStart)
+          where (nextInt, digit) = int `divMod` fromIntegral validTokenBase
 
 encodeInteger :: Int -> BS.ByteString
 encodeInteger = BL.toStrict . BB.toLazyByteString . encodeInteger'

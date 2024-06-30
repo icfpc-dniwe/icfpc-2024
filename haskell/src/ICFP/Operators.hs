@@ -12,7 +12,7 @@ import Control.Monad.Error.Class (MonadError(throwError))
 
 import ICFP.AST
 import ICFP.Evaluate (UnaryOp(..), BinaryOp(..), MonadEval, evaluate, ICFPOperators(..), EvalValue)
-import ICFP.Encoding.Utils (encodeInteger, decodeInteger)
+import ICFP.Encoding.Utils (encodeInteger, decodeInteger, decodeString, encodeString)
 
 type UnaryOpPair = (Char, UnaryOp)
 
@@ -32,14 +32,14 @@ unaryNot = strictUnaryOp '!' $ \case
 unaryStringToInt :: UnaryOpPair
 unaryStringToInt = strictUnaryOp '#' $ \case
   VString s ->
-    case decodeInteger s of
+    case decodeInteger (encodeString s) of
       Just i -> return $ VInt i
       Nothing -> throwError $ "unaryStringToInt: invalid integer: " ++ BS8.unpack s
   arg -> throwError $ "unaryStringToInt: invalid argument: " ++ show arg
 
 unaryIntToString :: UnaryOpPair
 unaryIntToString = strictUnaryOp '$' $ \case
-  VInt i -> return $ VString $ encodeInteger i
+  VInt i -> return $ VString $ decodeString $ encodeInteger i
   arg -> throwError $ "unaryIntToString: invalid argument: " ++ show arg
 
 unaryOps :: HM.HashMap Char UnaryOp

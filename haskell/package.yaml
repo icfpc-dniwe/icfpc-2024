@@ -71,10 +71,9 @@ executables:
     - lens >= 4.5
 
 tests:
-  encoding:
-    main: Encoding.hs
+  test-suite:
+    main: Main.hs
     source-dirs: test
-    other-modules: []
     dependencies:
       - icfpc2024
       - HTF >= 0.15
