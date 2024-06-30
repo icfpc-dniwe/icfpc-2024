@@ -13,7 +13,7 @@ let
   drv = variant (haskellPackages.callPackage ./. {});
 
   shell = drv.env.overrideAttrs (self: {
-    nativeBuildInputs = self.nativeBuildInputs ++ [ haskellPackages.cabal-install haskellPackages.hpack pkgs.nodejs ];
+    nativeBuildInputs = self.nativeBuildInputs ++ [ haskellPackages.cabal-install haskellPackages.hpack pkgs.julia ];
   });
 
 in
