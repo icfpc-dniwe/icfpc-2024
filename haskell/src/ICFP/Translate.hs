@@ -9,7 +9,6 @@ import Data.Void (Void)
 import Data.Text.Encoding (encodeUtf8, decodeASCII)
 import qualified Data.Text as T
 import Text.InterpolatedString.Perl6 (q)
-import System.IO (stderr)
 import System.Process (readProcess)
 
 import ICFP.AST
@@ -144,7 +143,7 @@ translateTopLevelExpression expr =
 translateAndEvalExpression :: Expression Void -> IO (Value Void)
 translateAndEvalExpression expr = do
   let !js = translateTopLevelExpression expr
-  BB.hPutBuilder stderr js
+  -- BB.hPutBuilder stderr js
   rawOutput <- readProcess "julia" ["-O2", "-"] (BSL.unpack $ BB.toLazyByteString js)
   case rawOutput of
     "t" -> return $ VBool True
