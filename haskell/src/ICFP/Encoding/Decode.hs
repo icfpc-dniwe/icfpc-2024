@@ -4,7 +4,7 @@ module ICFP.Encoding.Decode
   ) where
 
 import Data.Functor (($>))
-import Control.Applicative ((<|>))
+import Control.Applicative ((<|>), optional)
 import Data.Word (Word8)
 import Text.Megaparsec (MonadParsec (takeWhile1P, eof), Stream (Token, Tokens), (<?>), satisfy, errorBundlePretty, ParseErrorBundle (), runParser)
 import qualified Data.ByteString as BS
@@ -50,7 +50,7 @@ icfpInteger = do
     Nothing -> fail $ "icfpInteger: invalid integer: " ++ BS8.unpack tok
 
 icfpString :: MonadICFPParsec e s m => m (Expression ctx)
-icfpString = string "S" *> (EValue . VString . decodeString <$> token)
+icfpString = string "S" *> (EValue . VString . maybe "" decodeString <$> optional token)
 
 icfpUnaryOperator :: MonadICFPParsec e s m => m (Expression ctx)
 icfpUnaryOperator = EUnary <$> (string "U" *> tokenChar) <*> (string " " *> icfpExpression)

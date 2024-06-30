@@ -11,12 +11,12 @@ import qualified Data.ByteString.Char8 as BS8
 import Control.Monad.Error.Class (MonadError(throwError))
 
 import ICFP.AST
-import ICFP.Evaluate (UnaryOp(..), BinaryOp(..), MonadICFPT, evaluate, ICFPOperators(..), EvalValue)
+import ICFP.Evaluate (UnaryOp(..), BinaryOp(..), MonadEval, evaluate, ICFPOperators(..), EvalValue)
 import ICFP.Encoding.Utils (encodeInteger, decodeInteger)
 
 type UnaryOpPair = (Char, UnaryOp)
 
-strictUnaryOp :: Char -> (forall m. EvalValue -> MonadICFPT m EvalValue) -> (Char, UnaryOp)
+strictUnaryOp :: Char -> (forall s. EvalValue s -> MonadEval s (EvalValue s)) -> (Char, UnaryOp)
 strictUnaryOp c f = (c, UnaryOp (evaluate >=> f))
 
 unaryNegate :: UnaryOpPair
@@ -52,7 +52,7 @@ unaryOps = HM.fromList $
 
 type BinaryOpPair = (Char, BinaryOp)
 
-strictBinaryOp :: Char -> (forall m. (EvalValue, EvalValue) -> MonadICFPT m EvalValue) -> BinaryOpPair
+strictBinaryOp :: Char -> (forall s. (EvalValue s, EvalValue s) -> MonadEval s (EvalValue s)) -> BinaryOpPair
 strictBinaryOp c f = (c, BinaryOp $ \e1 e2 -> evaluate e1 >>= \v1 -> evaluate e2 >>= \v2 -> f (v1, v2))
 
 binaryAdd :: BinaryOpPair

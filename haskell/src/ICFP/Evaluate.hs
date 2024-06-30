@@ -1,128 +1,170 @@
 module ICFP.Evaluate
   ( EvalExpression
   , EvalValue
-  , ICFPClosure
+  , EvalClosure
   , UnaryOp(..)
   , BinaryOp(..)
   , ICFPOperators(..)
-  , MonadICFPT
+  , MonadEval
   , evaluate
   , evaluateTopLevel
+  , VariableValue(..)
+  , LambdaClosure(..)
   , EvalResult(..)
   ) where
 
-import Control.Monad (when)
+import Control.Monad (when, unless)
 import qualified Data.HashMap.Strict as HM
-import Control.Monad.Reader (ReaderT, asks, runReaderT, MonadReader (ask))
-import Control.Monad.State.Strict (StateT, runStateT, modify, gets, MonadState (state))
+import Control.Monad.Reader (ReaderT, asks, runReaderT, MonadReader (local))
+import Control.Monad.State.Strict (StateT, runStateT, modify, gets)
 import Control.Monad.Error.Class (MonadError(throwError))
-import Control.Monad.Trans (lift)
-import Control.Monad.Except (runExcept)
+import Control.Monad.Except (ExceptT, runExceptT)
+import Data.STRef.Strict (STRef, newSTRef, readSTRef, writeSTRef)
+import Control.Monad.ST (ST, runST)
+import Data.Void (Void)
+import Control.Monad.ST.Class (MonadST(liftST))
 
 import ICFP.AST
 
-type EvalExpression = Expression ICFPClosure
-type EvalValue = Value ICFPClosure
+type EvalExpression s = Expression (EvalClosure s)
+type EvalValue s = Value (EvalClosure s)
 
-newtype UnaryOp = UnaryOp (forall m. EvalExpression -> MonadICFPT m EvalValue)
-newtype BinaryOp = BinaryOp (forall m. EvalExpression -> EvalExpression -> MonadICFPT m EvalValue)
+newtype UnaryOp = UnaryOp (forall s. EvalExpression s -> MonadEval s (EvalValue s))
+newtype BinaryOp = BinaryOp (forall s. EvalExpression s -> EvalExpression s -> MonadEval s (EvalValue s))
 
 data ICFPOperators = ICFPOperators { lookupUnaryOp :: !(Char -> Maybe UnaryOp)
                                    , lookupBinaryOp :: !(Char -> Maybe BinaryOp)
                                    }
 
-type Reference = Int
-type Variables = HM.HashMap Variable (Either EvalValue Reference)
+data CachedResult s = CachedResult { cachedValue :: !(EvalValue s)
+                                   , cachedBetaReductions :: !Int
+                                   }
 
-newtype ICFPClosure = ICFPClosure { closureVariables :: Variables
-                                  }
-                    deriving (Show, Eq)
+data EvalVariableValue s = EVVByNameOrNeed { varMemoize :: !Bool
+                                           , varExpression :: !(EvalExpression s)
+                                           , varVariables :: !(EvalVariables s)
+                                           , varResult :: !(STRef s (Maybe (CachedResult s)))
+                                           }
+                         | EVVByValue { varValue :: !(EvalValue s)
+                                      }
 
-data ICFPContext = ICFPContext { icfpOperators :: !ICFPOperators
-                               , icfpVariables :: !Variables
-                               }
+appPrec :: Int
+appPrec = 10
 
-data CachedValue
-  = CVExpression { cachedExpression :: !EvalExpression
-                 , cachedMemoize :: !Bool
-                 }
-  | CVResult { cachedValue :: !EvalValue
-             , cachedBetaReductions :: !Int
-             }
-  deriving (Show, Eq)
+instance Show (EvalVariableValue s) where
+  showsPrec d (EVVByNameOrNeed {..}) =
+    showParen (d > appPrec) $
+      showString "EVVByNameOrNeed " .
+      showsPrec (appPrec + 1) varMemoize .
+      showChar ' ' .
+      showsPrec (appPrec + 1) varExpression
+  showsPrec d (EVVByValue {..}) =
+    showParen (d > appPrec) $
+      showString "EVVByValue " .
+      showsPrec (appPrec + 1) varValue
 
-data ICFPState = ICFPState { icfpBetaReductions :: !Int
-                           , icfpVariablesCache :: !(HM.HashMap Reference CachedValue)
-                           , icfpNextReference :: !Int
-                           }
-               deriving (Show, Eq)
+type EvalVariables s = HM.HashMap Variable (EvalVariableValue s)
 
-type MonadICFPT m a = (MonadError String m) => ReaderT ICFPContext (StateT ICFPState m) a
+newtype EvalClosure s = EvalClosure { evalVariables :: EvalVariables s
+                                    }
+                      deriving (Show)
 
-evaluateVariable :: Variable -> MonadICFPT m EvalValue
-evaluateVariable name = do
+data EvalContext s = EvalContext { icfpOperators :: !ICFPOperators
+                                 , icfpVariables :: !(EvalVariables s)
+                                 }
+
+newtype ICFPState = ICFPState { icfpBetaReductions :: Int
+                              }
+                  deriving (Show, Eq)
+
+newtype MonadEval s a = MonadEval { runMonadEval :: ReaderT (EvalContext s) (StateT ICFPState (ExceptT String (ST s))) a }
+                      deriving (Functor, Applicative, Monad, MonadError String)
+
+localVars :: EvalVariables s -> MonadEval s a -> MonadEval s a
+localVars vars = MonadEval . local (\ctx -> ctx { icfpVariables = vars }) . runMonadEval
+
+evaluateVariable :: Variable -> MonadEval s (EvalValue s)
+evaluateVariable name = MonadEval $ do
   vars <- asks icfpVariables
   case HM.lookup name vars of
     Nothing -> throwError $ "evaluate: unknown variable: " ++ show name
-    Just (Left v) -> return v
-    Just (Right ref) -> do
-      cache <- gets $ HM.lookup ref . icfpVariablesCache
-      case cache of
-        Nothing -> throwError $ "evaluate: unknown reference: " ++ show ref
-        Just (CVExpression {..}) -> do
-          cachedVal <-
-            if cachedMemoize then do
-              val <- evaluate cachedExpression
-              return $ CVResult { cachedValue = val, cachedBetaReductions = 0 }
-            else do
-              startBetaReductions <- gets icfpBetaReductions
-              val <- evaluate cachedExpression
-              endBetaReductions <- gets icfpBetaReductions
-              return $ CVResult { cachedValue = val, cachedBetaReductions = endBetaReductions - startBetaReductions }
-          modify $ \s -> s { icfpVariablesCache = HM.insert ref cachedVal (icfpVariablesCache s) }
-          return $ cachedValue cachedVal
-        Just (CVResult {..}) -> do
+    Just (EVVByValue v) -> return v
+    Just (EVVByNameOrNeed {..}) -> do
+      cached <- liftST $ readSTRef varResult
+      case cached of
+        Just (CachedResult {..}) -> do
           when (cachedBetaReductions > 0) $ modify $ \s -> s { icfpBetaReductions = icfpBetaReductions s + cachedBetaReductions }
           return cachedValue
+        Nothing -> do
+          newVal <-
+            if varMemoize then do
+              val <- runMonadEval $ localVars varVariables $ evaluate varExpression
+              return $ CachedResult { cachedValue = val, cachedBetaReductions = 0 }
+            else do
+              startBetaReductions <- gets icfpBetaReductions
+              val <- runMonadEval $ localVars varVariables $ evaluate varExpression
+              endBetaReductions <- gets icfpBetaReductions
+              return $ CachedResult { cachedValue = val, cachedBetaReductions = endBetaReductions - startBetaReductions }
+          liftST $ writeSTRef varResult $ Just newVal
+          return $ cachedValue newVal
 
-cacheVariable :: Bool -> EvalExpression -> MonadICFPT m Reference
-cacheVariable memoize expr = state op
-  where op s = (ref, s')
-          where ref = icfpNextReference s
-                cached = CVExpression { cachedExpression = expr, cachedMemoize = memoize }
-                s' = s { icfpNextReference = ref + 1
-                       , icfpVariablesCache = HM.insert ref cached (icfpVariablesCache s)
-                       }
+variableByNameOrNeed :: Bool -> EvalExpression s -> MonadEval s (EvalVariableValue s)
+variableByNameOrNeed memoize expr = MonadEval $ do
+  varResult <- liftST $ newSTRef Nothing
+  vars <- asks icfpVariables
+  return $ EVVByNameOrNeed { varMemoize = memoize
+                           , varExpression = expr
+                           , varVariables = vars
+                           , varResult = varResult
+                           }
 
-evaluate :: EvalExpression -> MonadICFPT m EvalValue
+checkClosure :: EvalVariables s -> EvalExpression s -> MonadEval s ()
+checkClosure _vars (EValue _val) = return ()
+checkClosure vars (EVariable v) =
+  unless (HM.member v vars) $ throwError $ "checkClosure: unknown variable: " ++ show v
+checkClosure vars (EUnary _op arg) = checkClosure vars arg
+checkClosure vars (EBinary _op arg1 arg2) = do
+  checkClosure vars arg1
+  checkClosure vars arg2
+-- We can skip checking the inner lambda now; it will be checked later.
+checkClosure _vars (ELambda _arg _body) = return ()
+checkClosure vars (EApply _strategy lambda arg) = do
+  checkClosure vars lambda
+  checkClosure vars arg
+checkClosure vars (EIf cond then' else') = do
+  checkClosure vars cond
+  checkClosure vars then'
+  checkClosure vars else'
+
+evaluate :: EvalExpression s -> MonadEval s (EvalValue s)
 evaluate (EValue v) = return v
 evaluate (EVariable v) = evaluateVariable v
-evaluate (EUnary op arg) = do
+evaluate (EUnary op arg) = MonadEval $ do
   lookupOp <- asks $ lookupUnaryOp . icfpOperators
   case lookupOp op of
-    Just (UnaryOp f) -> f arg
+    Just (UnaryOp f) -> runMonadEval $ f arg
     Nothing -> throwError $ "evaluate: unknown unary operator: " ++ show op
-evaluate (EBinary op arg1 arg2) = do
+evaluate (EBinary op arg1 arg2) = MonadEval $ do
   lookupOp <- asks $ lookupBinaryOp . icfpOperators
   case lookupOp op of
-    Just (BinaryOp f) -> f arg1 arg2
+    Just (BinaryOp f) -> runMonadEval $ f arg1 arg2
     Nothing -> throwError $ "evaluate: unknown binary operator: " ++ show op
-evaluate (ELambda arg body) = do
-  vars <- asks icfpVariables
-  let closure = ICFPClosure vars
-  return $ VLambda closure arg body
+evaluate lambda@(ELambda arg body) = do
+  vars <- MonadEval $ asks icfpVariables
+  checkClosure vars lambda
+  return $ VLambda (EvalClosure vars) arg body
 evaluate (EApply strategy lambda argVal) = do
   lambdaV <- evaluate lambda
   case lambdaV of
     VLambda closure arg body -> do
+      MonadEval $ modify $ \s -> s { icfpBetaReductions = icfpBetaReductions s + 1 }
       var <-
         case strategy of
-          CallByValue -> Left <$> evaluate argVal
-          CallByName -> Right <$> cacheVariable False argVal
-          CallByNeed -> Right <$> cacheVariable True argVal
-      let vars' = HM.insert arg var $ closureVariables closure
-      ctx <- ask
-      lift $ runReaderT (evaluate body) (ctx { icfpVariables = vars' })
+          CallByValue -> EVVByValue <$> evaluate argVal
+          CallByName -> variableByNameOrNeed False argVal
+          CallByNeed -> variableByNameOrNeed True argVal
+      let vars' = HM.insert arg var $ evalVariables closure
+      localVars vars' $ evaluate body
     _ -> throwError $ "evaluate: invalid lambda: " ++ show lambdaV
 evaluate (EIf cond then' else') = do
   b <- evaluate cond
@@ -131,18 +173,40 @@ evaluate (EIf cond then' else') = do
     VBool False -> evaluate else'
     _ -> throwError $ "evaluate: invalid condition: " ++ show b
 
-data EvalResult = EvalResult { evalValue :: !EvalValue
+data VariableValue
+  = VVByName !(Expression LambdaClosure)
+  | VVByNeed !(Expression LambdaClosure) !(Maybe (Value LambdaClosure))
+  | VVByValue !(Value LambdaClosure)
+  deriving (Show, Eq)
+
+newtype LambdaClosure = LambdaClosure { closureVariables :: HM.HashMap Variable VariableValue }
+                      deriving (Show, Eq)
+
+data EvalResult = EvalResult { evalValue :: !(Value LambdaClosure)
                              , evalBetaReductions :: !Int
                              }
 
-evaluateTopLevel :: ICFPOperators -> EvalExpression -> Either String EvalResult
+freezeClosure :: forall s. EvalClosure s -> MonadEval s LambdaClosure
+freezeClosure (EvalClosure vars) = LambdaClosure <$> traverse freezeVariable vars
+  where freezeVariable :: EvalVariableValue s -> MonadEval s VariableValue
+        freezeVariable (EVVByValue v) = VVByValue <$> traverse freezeClosure v
+        freezeVariable (EVVByNameOrNeed {..}) = do
+          expr <- traverse freezeClosure varExpression
+          if varMemoize then do
+            cached <- MonadEval $ liftST $ readSTRef varResult
+            result <- traverse (traverse freezeClosure . cachedValue) cached
+            return $ VVByNeed expr result
+          else
+            return $ VVByName expr
+
+evaluateTopLevel :: ICFPOperators -> Expression Void -> Either String EvalResult
 evaluateTopLevel ops expr =
-  runExcept (mapResult <$> runStateT (runReaderT (evaluate expr) initialContext) initialState)
-  where initialContext = ICFPContext { icfpOperators = ops
+  runST $ runExceptT (mapResult <$> runStateT (runReaderT (runMonadEval $ evaluate thawed >>= traverse freezeClosure) initialContext) initialState)
+  where initialContext = EvalContext { icfpOperators = ops
                                      , icfpVariables = HM.empty
                                      }
         initialState = ICFPState { icfpBetaReductions = 0
-                                 , icfpVariablesCache = HM.empty
-                                 , icfpNextReference = 0
                                  }
         mapResult (val, s) = EvalResult { evalValue = val, evalBetaReductions = icfpBetaReductions s }
+        -- Convert the expression to the internal form. `Void` cannot happen, so this is safe.
+        thawed = fmap (const undefined) expr

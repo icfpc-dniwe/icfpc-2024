@@ -10,6 +10,7 @@ dependencies:
 - megaparsec >= 9.5
 - mtl >= 2.3
 - unordered-containers >= 0.2.19
+- monad-st >= 0.2
 
 ghc-options:
 - -Wall
@@ -22,6 +23,10 @@ default-extensions:
 - LambdaCase
 - RankNTypes
 - RecordWildCards
+- GeneralizedNewtypeDeriving
+- DeriveFunctor
+- DeriveFoldable
+- DeriveTraversable
 
 library:
   source-dirs: src

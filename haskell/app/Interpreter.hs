@@ -9,8 +9,8 @@ main :: IO ()
 main = do
   rawExpr <- BS.strip <$> BS.getContents
   case parseIcfpExpression rawExpr of
-    Left err -> fail $ "Parse error: " ++ show err
-    Right expr ->
+    Left err -> fail $ "Parse error: " ++ err
+    Right expr -> do
       case evaluateTopLevel icfpOperators expr of
         Left err -> fail $ "Evaluation error: " ++ show err
         Right (EvalResult { evalValue = VString val }) -> BS.putStrLn val

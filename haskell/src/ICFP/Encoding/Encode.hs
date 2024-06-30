@@ -9,7 +9,7 @@ import ICFP.AST
 import ICFP.Encoding.Utils (encodeInteger', encodeString)
 
 encodeLambda :: Int -> Expression ctx -> BB.Builder
-encodeLambda arg body = "L" <> encodeInteger' arg <> encodeExpression body
+encodeLambda arg body = "L" <> encodeInteger' arg <> " " <> encodeExpression body
 
 encodeValue :: Value ctx -> BB.Builder
 encodeValue (VInt i) = "I" <> encodeInteger' i

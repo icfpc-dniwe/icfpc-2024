@@ -1,5 +1,5 @@
-{ mkDerivation, base, bytestring, HTF, lib, megaparsec, mtl
-, unordered-containers
+{ mkDerivation, base, bytestring, HTF, lib, megaparsec, monad-st
+, mtl, unordered-containers
 }:
 mkDerivation {
   pname = "icfpc2024";
@@ -8,13 +8,13 @@ mkDerivation {
   isLibrary = true;
   isExecutable = true;
   libraryHaskellDepends = [
-    base bytestring megaparsec mtl unordered-containers
+    base bytestring megaparsec monad-st mtl unordered-containers
   ];
   executableHaskellDepends = [
-    base bytestring megaparsec mtl unordered-containers
+    base bytestring megaparsec monad-st mtl unordered-containers
   ];
   testHaskellDepends = [
-    base bytestring HTF megaparsec mtl unordered-containers
+    base bytestring HTF megaparsec monad-st mtl unordered-containers
   ];
   homepage = "https://github.com/icfpc-dniwe/icfpc2024#readme";
   license = lib.licenses.bsd3;
