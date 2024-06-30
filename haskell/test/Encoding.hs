@@ -11,19 +11,21 @@ import Text.InterpolatedString.Perl6 (q)
 
 import ICFP.AST
 import ICFP.Encoding.Decode (parseIcfpExpression)
-import ICFP.Encoding.Encode (encodeValue)
+import ICFP.Encoding.Encode (encodeValue, encodeExpression)
 import ICFP.Encoding.Utils (stringAlphabet)
 import Data.Void (Void)
 
-testDecoding :: BS.ByteString -> Expression Void -> IO ()
-testDecoding input outp = assertEqual (Right outp) (parseIcfpExpression input)
+testRoundtrip :: BS.ByteString -> Expression Void -> IO ()
+testRoundtrip input outp = do
+  assertEqual (Right outp) (parseIcfpExpression input)
+  assertEqual input (BL.toStrict $ BB.toLazyByteString $ encodeExpression outp)
 
 test_basic :: IO ()
-test_basic = testDecoding "S'%4}).$%8" (EValue (VString "get index"))
+test_basic = testRoundtrip "S'%4}).$%8" (EValue (VString "get index"))
 
 -- Checked by hand.
 test_lambdaman6 :: IO ()
-test_lambdaman6 = testDecoding lambdaman6 lambdaman6Tree
+test_lambdaman6 = testRoundtrip lambdaman6 lambdaman6Tree
   where lambdaman6 = [q|B. SF B$ B$ L" B$ L" B$ L# B$ v" B$ v# v# L# B$ v" B$ v# v# L$ L# ? B= v# I" v" B. v" B$ v$ B- v# I" Sl I#,|]
         lambdaman6Tree =
           EBinary '.'

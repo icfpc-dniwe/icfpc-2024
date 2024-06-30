@@ -27,7 +27,7 @@ encodeExpression :: Expression ctx -> BB.Builder
 encodeExpression (EValue v) = encodeValue v
 encodeExpression (EUnary op arg) = "U" <> BB.char7 op <> " " <> encodeExpression arg
 encodeExpression (EBinary op arg1 arg2) = "B" <> BB.char7 op <> " " <> encodeExpression arg1 <> " " <> encodeExpression arg2
-encodeExpression (EIf cond then' else') = "I" <> " " <> encodeExpression cond <> " " <> encodeExpression then' <> " " <> encodeExpression else'
+encodeExpression (EIf cond then' else') = "?" <> " " <> encodeExpression cond <> " " <> encodeExpression then' <> " " <> encodeExpression else'
 encodeExpression (ELambda arg body) = encodeLambda arg body
-encodeExpression (EApply strategy lambda arg) = encodeCallStrategy strategy <> " " <> encodeExpression lambda <> " " <> encodeExpression arg
+encodeExpression (EApply strategy lambda arg) = "B" <> encodeCallStrategy strategy <> " " <> encodeExpression lambda <> " " <> encodeExpression arg
 encodeExpression (EVariable v) = "v" <> encodeInteger' v

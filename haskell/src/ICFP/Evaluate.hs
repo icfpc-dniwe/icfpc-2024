@@ -193,9 +193,9 @@ evaluate (EApply strategy lambda argVal) = do
           CallByValue -> EVVByValue <$> evaluate argVal
           CallByName -> variableByNameOrNeed False argVal
           CallByNeed -> variableByNameOrNeed True argVal
-      let vars' = HM.insert arg var $ evalVariables closure
+      let !vars' = HM.insert arg var $ evalVariables closure
       case var of
-        EVVByValue (toHashableValue -> Just hashableArg) -> do
+        EVVByValue (toHashableValue -> Just hashableArg) | False -> do
           cache <- MonadEval $ liftST $ readSTRef $ evalLRU closure
           case HM.lookup hashableArg cache of
             Just (CachedResult {..}) -> do

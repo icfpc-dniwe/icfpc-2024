@@ -33,8 +33,8 @@ test_evalHello4 =
     Right (EvalResult { evalValue = val }) -> fail $ "Expected string, got: " ++ show val
     Left err -> fail $ "Evaluation error: " ++ show err
 
-test_jsHello4 :: IO ()
-test_jsHello4 = do
+test_juliaHello4 :: IO ()
+test_juliaHello4 = do
   ret <- translateAndEvalExpression hello4
   case ret of
     VString str -> assertEqual hello4Result str

@@ -6,7 +6,17 @@ module ICFP.Encoding.Decode
 import Data.Functor (($>))
 import Control.Applicative ((<|>), optional)
 import Data.Word (Word8)
-import Text.Megaparsec (MonadParsec (takeWhile1P, eof), Stream (Token, Tokens), (<?>), satisfy, errorBundlePretty, ParseErrorBundle (), runParser)
+import Text.Megaparsec
+    ( (<|>),
+      optional,
+      (<?>),
+      runParser,
+      satisfy,
+      errorBundlePretty,
+      MonadParsec(eof, takeWhile1P),
+      ParseErrorBundle,
+      Stream(Tokens, Token) )
+import Text.Megaparsec.Byte ( string )
 import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as BS8
 import Data.Void (Void)
@@ -14,7 +24,6 @@ import Data.Maybe (fromJust)
 
 import ICFP.AST
 import ICFP.Encoding.Utils (decodeInteger, decodeString, isValidToken)
-import Text.Megaparsec.Byte (string)
 
 type MonadICFPParsec e s m = (MonadFail m, MonadParsec e s m, Token s ~ Word8, Tokens s ~ BS.ByteString)
 
