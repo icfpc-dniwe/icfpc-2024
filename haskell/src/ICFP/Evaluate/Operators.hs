@@ -66,9 +66,15 @@ binarySubtract = strictBinaryOp '-' $ \case
   (arg1, arg2) -> throwError $ "binarySubtract: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
 
 binaryMultiply :: BinaryOpPair
-binaryMultiply = strictBinaryOp '*' $ \case
-  (VInt i1, VInt i2) -> return $ VInt (i1 * i2)
-  (arg1, arg2) -> throwError $ "binaryMultiply: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
+binaryMultiply = ('*', BinaryOp f)
+  where f _ (EValue (VInt 0)) = return $ VInt 0
+        f (EValue (VInt 0)) _ = return $ VInt 0
+        f a b = do
+          a' <- evaluate a
+          b' <- evaluate b
+          case (a', b') of
+            (VInt i1, VInt i2) -> return $ VInt (i1 * i2)
+            _ -> throwError $ "binaryMultiply: invalid arguments: " ++ show a' ++ ", " ++ show b'
 
 binaryDivide :: BinaryOpPair
 binaryDivide = strictBinaryOp '/' $ \case
@@ -98,14 +104,24 @@ binaryEqual = strictBinaryOp '=' $ \case
   (arg1, arg2) -> throwError $ "binaryEqual: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
 
 binaryAnd :: BinaryOpPair
-binaryAnd = strictBinaryOp '&' $ \case
-  (VBool b1, VBool b2) -> return $ VBool (b1 && b2)
-  (arg1, arg2) -> throwError $ "binaryAnd: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
+binaryAnd = ('&', BinaryOp f)
+  where f (EValue (VBool False)) _ = return $ VBool False
+        f _ (EValue (VBool False)) = return $ VBool False
+        f a b =
+          evaluate a >>= \case
+            VBool False -> return $ VBool False
+            VBool True -> evaluate b
+            arg -> throwError $ "binaryAnd: invalid argument: " ++ show arg
 
 binaryOr :: BinaryOpPair
-binaryOr = strictBinaryOp '|' $ \case
-  (VBool b1, VBool b2) -> return $ VBool (b1 || b2)
-  (arg1, arg2) -> throwError $ "binaryOr: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
+binaryOr = ('|', BinaryOp f)
+  where f (EValue (VBool True)) _ = return $ VBool True
+        f _ (EValue (VBool True)) = return $ VBool True
+        f a b =
+          evaluate a >>= \case
+            VBool True -> return $ VBool True
+            VBool False -> evaluate b
+            arg -> throwError $ "binaryOr: invalid argument: " ++ show arg
 
 binaryConcat :: BinaryOpPair
 binaryConcat = strictBinaryOp '.' $ \case

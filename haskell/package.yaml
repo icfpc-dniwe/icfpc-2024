@@ -14,6 +14,7 @@ dependencies:
 - text >= 2.0
 - interpolatedstring-perl6 >= 1.0.0
 - process >= 1.6
+- hashable >= 1.4
 
 ghc-options:
 - -Wall
@@ -31,8 +32,12 @@ default-extensions:
 - DeriveFunctor
 - DeriveFoldable
 - DeriveTraversable
+- DeriveGeneric
+- DeriveAnyClass
+- DerivingStrategies
 - QuasiQuotes
 - BangPatterns
+- ViewPatterns
 
 library:
   source-dirs: src

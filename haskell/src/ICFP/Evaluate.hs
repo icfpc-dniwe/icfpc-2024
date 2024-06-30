@@ -13,16 +13,19 @@ module ICFP.Evaluate
   , EvalResult(..)
   ) where
 
+import GHC.Generics (Generic)
 import Control.Monad (when, unless)
 import qualified Data.HashMap.Strict as HM
+import qualified Data.ByteString as BS
 import Control.Monad.Reader (ReaderT, asks, runReaderT, MonadReader (local))
 import Control.Monad.State.Strict (StateT, runStateT, modify, gets)
 import Control.Monad.Error.Class (MonadError(throwError))
 import Control.Monad.Except (ExceptT, runExceptT)
-import Data.STRef.Strict (STRef, newSTRef, readSTRef, writeSTRef)
+import Data.STRef.Strict (STRef, newSTRef, readSTRef, writeSTRef, modifySTRef')
 import Control.Monad.ST (ST, runST)
 import Data.Void (Void)
 import Control.Monad.ST.Class (MonadST(liftST))
+import Data.Hashable (Hashable)
 
 import ICFP.AST
 
@@ -65,9 +68,28 @@ instance Show (EvalVariableValue s) where
 
 type EvalVariables s = HM.HashMap Variable (EvalVariableValue s)
 
-newtype EvalClosure s = EvalClosure { evalVariables :: EvalVariables s
-                                    }
-                      deriving (Show)
+data HashableValue
+  = CVInt !Int
+  | CVBool !Bool
+  | CVString !BS.ByteString
+  deriving (Show, Eq, Ord, Generic)
+  deriving anyclass (Hashable)
+
+toHashableValue :: EvalValue s -> Maybe HashableValue
+toHashableValue (VInt i) = Just $ CVInt i
+toHashableValue (VBool b) = Just $ CVBool b
+toHashableValue (VString s) = Just $ CVString s
+toHashableValue _ = Nothing
+
+data EvalClosure s = EvalClosure { evalVariables :: !(EvalVariables s)
+                                 , evalLRU :: !(STRef s (HM.HashMap HashableValue (CachedResult s)))
+                                 }
+
+instance Show (EvalClosure s) where
+  showsPrec d (EvalClosure {..}) =
+    showParen (d > appPrec) $
+      showString "EvalClosure " .
+      showsPrec (appPrec + 1) evalVariables
 
 data EvalContext s = EvalContext { icfpOperators :: !ICFPOperators
                                  , icfpVariables :: !(EvalVariables s)
@@ -75,37 +97,41 @@ data EvalContext s = EvalContext { icfpOperators :: !ICFPOperators
 
 newtype ICFPState = ICFPState { icfpBetaReductions :: Int
                               }
-                  deriving (Show, Eq)
+                  deriving stock (Show, Eq)
 
 newtype MonadEval s a = MonadEval { runMonadEval :: ReaderT (EvalContext s) (StateT ICFPState (ExceptT String (ST s))) a }
-                      deriving (Functor, Applicative, Monad, MonadError String)
+                      deriving newtype (Functor, Applicative, Monad, MonadError String)
 
 localVars :: EvalVariables s -> MonadEval s a -> MonadEval s a
 localVars vars = MonadEval . local (\ctx -> ctx { icfpVariables = vars }) . runMonadEval
 
+evalToCachedResult :: EvalVariables s -> EvalExpression s -> MonadEval s (CachedResult s)
+evalToCachedResult vars expr = do
+  startBetaReductions <- MonadEval $ gets icfpBetaReductions
+  val <- localVars vars $ evaluate expr
+  endBetaReductions <- MonadEval $ gets icfpBetaReductions
+  return $ CachedResult { cachedValue = val, cachedBetaReductions = endBetaReductions - startBetaReductions }
+
 evaluateVariable :: Variable -> MonadEval s (EvalValue s)
-evaluateVariable name = MonadEval $ do
-  vars <- asks icfpVariables
+evaluateVariable name = do
+  vars <- MonadEval $ asks icfpVariables
   case HM.lookup name vars of
     Nothing -> throwError $ "evaluate: unknown variable: " ++ show name
     Just (EVVByValue v) -> return v
     Just (EVVByNameOrNeed {..}) -> do
-      cached <- liftST $ readSTRef varResult
+      cached <- MonadEval $ liftST $ readSTRef varResult
       case cached of
         Just (CachedResult {..}) -> do
-          when (cachedBetaReductions > 0) $ modify $ \s -> s { icfpBetaReductions = icfpBetaReductions s + cachedBetaReductions }
+          when (cachedBetaReductions > 0) $ MonadEval $ modify $ \s -> s { icfpBetaReductions = icfpBetaReductions s + cachedBetaReductions }
           return cachedValue
         Nothing -> do
           newVal <-
             if varMemoize then do
-              val <- runMonadEval $ localVars varVariables $ evaluate varExpression
+              val <- localVars varVariables $ evaluate varExpression
               return $ CachedResult { cachedValue = val, cachedBetaReductions = 0 }
             else do
-              startBetaReductions <- gets icfpBetaReductions
-              val <- runMonadEval $ localVars varVariables $ evaluate varExpression
-              endBetaReductions <- gets icfpBetaReductions
-              return $ CachedResult { cachedValue = val, cachedBetaReductions = endBetaReductions - startBetaReductions }
-          liftST $ writeSTRef varResult $ Just newVal
+              evalToCachedResult varVariables varExpression
+          MonadEval $ liftST $ writeSTRef varResult $ Just newVal
           return $ cachedValue newVal
 
 variableByNameOrNeed :: Bool -> EvalExpression s -> MonadEval s (EvalVariableValue s)
@@ -152,7 +178,11 @@ evaluate (EBinary op arg1 arg2) = MonadEval $ do
 evaluate lambda@(ELambda arg body) = do
   vars <- MonadEval $ asks icfpVariables
   checkClosure vars lambda
-  return $ VLambda (EvalClosure vars) arg body
+  cache <- MonadEval $ liftST $ newSTRef HM.empty
+  let closure = EvalClosure { evalVariables = vars
+                            , evalLRU = cache
+                            }
+  return $ VLambda closure arg body
 evaluate (EApply strategy lambda argVal) = do
   lambdaV <- evaluate lambda
   case lambdaV of
@@ -164,7 +194,18 @@ evaluate (EApply strategy lambda argVal) = do
           CallByName -> variableByNameOrNeed False argVal
           CallByNeed -> variableByNameOrNeed True argVal
       let vars' = HM.insert arg var $ evalVariables closure
-      localVars vars' $ evaluate body
+      case var of
+        EVVByValue (toHashableValue -> Just hashableArg) -> do
+          cache <- MonadEval $ liftST $ readSTRef $ evalLRU closure
+          case HM.lookup hashableArg cache of
+            Just (CachedResult {..}) -> do
+              MonadEval $ modify $ \s -> s { icfpBetaReductions = icfpBetaReductions s + cachedBetaReductions }
+              return cachedValue
+            Nothing -> do
+              ret <- evalToCachedResult vars' body
+              MonadEval $ liftST $ modifySTRef' (evalLRU closure) $ HM.insert hashableArg ret
+              return $ cachedValue ret
+        _ -> localVars vars' $ evaluate body
     _ -> throwError $ "evaluate: invalid lambda: " ++ show lambdaV
 evaluate (EIf cond then' else') = do
   b <- evaluate cond
@@ -187,7 +228,7 @@ data EvalResult = EvalResult { evalValue :: !(Value LambdaClosure)
                              }
 
 freezeClosure :: forall s. EvalClosure s -> MonadEval s LambdaClosure
-freezeClosure (EvalClosure vars) = LambdaClosure <$> traverse freezeVariable vars
+freezeClosure (EvalClosure {..}) = LambdaClosure <$> traverse freezeVariable evalVariables
   where freezeVariable :: EvalVariableValue s -> MonadEval s VariableValue
         freezeVariable (EVVByValue v) = VVByValue <$> traverse freezeClosure v
         freezeVariable (EVVByNameOrNeed {..}) = do
