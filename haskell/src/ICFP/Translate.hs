@@ -92,7 +92,7 @@ end
 |]
 
 translateValue :: Value Void -> BB.Builder
-translateValue (VInt i) = BB.intDec i
+translateValue (VInt i) = BB.integerDec i
 translateValue (VBool True) = "true"
 translateValue (VBool False) = "false"
 -- Hacky.

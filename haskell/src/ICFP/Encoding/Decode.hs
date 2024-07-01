@@ -70,7 +70,7 @@ icfpIf = EIf <$> (string "? " *> icfpExpression) <*> (string " " *> icfpExpressi
 
 icfpLambda :: MonadICFPParsec e s m => m (Expression ctx)
 -- Cannot fail because `token` checks that the chars are in the range.
-icfpLambda = ELambda <$> (fromJust . decodeInteger <$> (string "L" *> token)) <*> (string " " *> icfpExpression)
+icfpLambda = ELambda <$> (fromIntegral . fromJust . decodeInteger <$> (string "L" *> token)) <*> (string " " *> icfpExpression)
 
 icfpApply :: MonadICFPParsec e s m => m (Expression ctx)
 icfpApply = EApply <$> icfpCallStrategy <*> (string " " *> icfpExpression) <*> (string " " *> icfpExpression)
@@ -83,7 +83,7 @@ icfpCallStrategy =
 
 icfpVariable :: MonadICFPParsec e s m => m (Expression ctx)
 -- Cannot fail because `token` checks that the chars are in the range.
-icfpVariable = EVariable <$> (fromJust . decodeInteger <$> (string "v" *> token))
+icfpVariable = EVariable <$> (fromIntegral . fromJust . decodeInteger <$> (string "v" *> token))
 
 parseIcfpExpression :: BS.ByteString -> Either String (Expression ctx)
 parseIcfpExpression input =

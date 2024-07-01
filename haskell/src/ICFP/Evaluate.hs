@@ -1,11 +1,14 @@
 module ICFP.Evaluate
   ( EvalExpression
   , EvalValue
-  , EvalClosure
+  , EvalClosure(evalVariables)
+  , EvalVariables
   , UnaryOp(..)
   , BinaryOp(..)
   , ICFPOperators(..)
   , MonadEval
+  , askVars
+  , localVars
   , evaluate
   , evaluateTopLevel
   , VariableValue(..)
@@ -69,7 +72,7 @@ instance Show (EvalVariableValue s) where
 type EvalVariables s = HM.HashMap Variable (EvalVariableValue s)
 
 data HashableValue
-  = CVInt !Int
+  = CVInt !Integer
   | CVBool !Bool
   | CVString !BS.ByteString
   deriving (Show, Eq, Ord, Generic)
@@ -102,6 +105,9 @@ newtype ICFPState = ICFPState { icfpBetaReductions :: Int
 newtype MonadEval s a = MonadEval { runMonadEval :: ReaderT (EvalContext s) (StateT ICFPState (ExceptT String (ST s))) a }
                       deriving newtype (Functor, Applicative, Monad, MonadError String)
 
+askVars :: MonadEval s (EvalVariables s)
+askVars = MonadEval $ asks icfpVariables
+
 localVars :: EvalVariables s -> MonadEval s a -> MonadEval s a
 localVars vars = MonadEval . local (\ctx -> ctx { icfpVariables = vars }) . runMonadEval
 
@@ -114,7 +120,7 @@ evalToCachedResult vars expr = do
 
 evaluateVariable :: Variable -> MonadEval s (EvalValue s)
 evaluateVariable name = do
-  vars <- MonadEval $ asks icfpVariables
+  vars <- askVars
   case HM.lookup name vars of
     Nothing -> throwError $ "evaluate: unknown variable: " ++ show name
     Just (EVVByValue v) -> return v
@@ -135,9 +141,9 @@ evaluateVariable name = do
           return $ cachedValue newVal
 
 variableByNameOrNeed :: Bool -> EvalExpression s -> MonadEval s (EvalVariableValue s)
-variableByNameOrNeed memoize expr = MonadEval $ do
-  varResult <- liftST $ newSTRef Nothing
-  vars <- asks icfpVariables
+variableByNameOrNeed memoize expr = do
+  varResult <- MonadEval $ liftST $ newSTRef Nothing
+  vars <- askVars
   return $ EVVByNameOrNeed { varMemoize = memoize
                            , varExpression = expr
                            , varVariables = vars
@@ -176,7 +182,7 @@ evaluate (EBinary op arg1 arg2) = MonadEval $ do
     Just (BinaryOp f) -> runMonadEval $ f arg1 arg2
     Nothing -> throwError $ "evaluate: unknown binary operator: " ++ show op
 evaluate lambda@(ELambda arg body) = do
-  vars <- MonadEval $ asks icfpVariables
+  vars <- askVars
   checkClosure vars lambda
   cache <- MonadEval $ liftST $ newSTRef HM.empty
   let closure = EvalClosure { evalVariables = vars
@@ -195,7 +201,7 @@ evaluate (EApply strategy lambda argVal) = do
           CallByNeed -> variableByNameOrNeed True argVal
       let vars' = HM.insert arg var $ evalVariables closure
       case var of
-        EVVByValue (toHashableValue -> Just hashableArg) | False -> do
+        EVVByValue (toHashableValue -> Just hashableArg) -> do
           cache <- MonadEval $ liftST $ readSTRef $ evalLRU closure
           case HM.lookup hashableArg cache of
             Just (CachedResult {..}) -> do

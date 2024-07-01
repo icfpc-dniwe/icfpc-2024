@@ -11,7 +11,7 @@ import qualified Data.ByteString.Char8 as BS8
 import Control.Monad.Error.Class (MonadError(throwError))
 
 import ICFP.AST
-import ICFP.Evaluate (UnaryOp(..), BinaryOp(..), MonadEval, evaluate, ICFPOperators(..), EvalValue)
+import ICFP.Evaluate
 import ICFP.Encoding.Utils (encodeInteger, decodeInteger, decodeString, encodeString)
 
 type UnaryOpPair = (Char, UnaryOp)
@@ -42,12 +42,20 @@ unaryIntToString = strictUnaryOp '$' $ \case
   VInt i -> return $ VString $ decodeString $ encodeInteger i
   arg -> throwError $ "unaryIntToString: invalid argument: " ++ show arg
 
+unaryFix :: UnaryOpPair
+unaryFix = ('Y', UnaryOp f)
+  where f e = evaluate $ EApply CallByValue y e
+        -- L.1 ($ (L.2 ($ v1 ($ v2 v2))) (L.2 ($ v1 ($ v2 v2))))
+        y = ELambda 1 $ EApply CallByValue yHalf yHalf
+        yHalf = ELambda 2 $ EApply CallByValue (EVariable 1) (EApply CallByValue (EVariable 2) (EVariable 2))
+
 unaryOps :: HM.HashMap Char UnaryOp
 unaryOps = HM.fromList $
   [ unaryNegate
   , unaryNot
   , unaryStringToInt
   , unaryIntToString
+  , unaryFix
   ]
 
 type BinaryOpPair = (Char, BinaryOp)
@@ -130,12 +138,12 @@ binaryConcat = strictBinaryOp '.' $ \case
 
 binaryTake :: BinaryOpPair
 binaryTake = strictBinaryOp 'T' $ \case
-  (VInt i, VString s) -> return $ VString (BS.take i s)
+  (VInt i, VString s) -> return $ VString (BS.take (fromIntegral i) s)
   (arg1, arg2) -> throwError $ "binaryTake: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
 
 binaryDrop :: BinaryOpPair
 binaryDrop = strictBinaryOp 'D' $ \case
-  (VInt i, VString s) -> return $ VString (BS.drop i s)
+  (VInt i, VString s) -> return $ VString (BS.drop (fromIntegral i) s)
   (arg1, arg2) -> throwError $ "binaryDrop: invalid arguments: " ++ show arg1 ++ ", " ++ show arg2
 
 binaryOps :: HM.HashMap Char BinaryOp

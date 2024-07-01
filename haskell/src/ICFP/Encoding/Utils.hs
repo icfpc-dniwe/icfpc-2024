@@ -44,19 +44,19 @@ encodeString = BS.map mapOne
           Just i -> validTokenStart + fromIntegral i
           Nothing -> error $ "encodeString: invalid character: " ++ show (toEnum (fromIntegral c) :: Char)
 
-decodeInteger :: BS.ByteString -> Maybe Int
+decodeInteger :: BS.ByteString -> Maybe Integer
 decodeInteger = BS.foldl' foldOne (Just 0)
   where foldOne Nothing _ = Nothing
         foldOne (Just acc) char
           | char < validTokenStart || char > validTokenEnd = Nothing
           | otherwise = Just $ fromIntegral char - fromIntegral validTokenStart + acc * fromIntegral validTokenBase
 
-encodeInteger' :: Int -> BB.Builder
+encodeInteger' :: Integer -> BB.Builder
 encodeInteger' 0 = BB.word8 validTokenStart
 encodeInteger' int0 = encode int0
   where encode 0 = mempty
         encode int = encode nextInt <> BB.word8 (fromIntegral digit + validTokenStart)
           where (nextInt, digit) = int `divMod` fromIntegral validTokenBase
 
-encodeInteger :: Int -> BS.ByteString
+encodeInteger :: Integer -> BS.ByteString
 encodeInteger = BL.toStrict . BB.toLazyByteString . encodeInteger'

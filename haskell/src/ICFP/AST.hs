@@ -10,7 +10,7 @@ import qualified Data.ByteString as BS
 type Variable = Int
 
 data Value ctx
-  = VInt !Int
+  = VInt !Integer
   | VBool !Bool
   | VString !BS.ByteString
   | VLambda !ctx !Variable !(Expression ctx)
