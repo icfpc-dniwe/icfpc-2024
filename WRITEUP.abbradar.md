@@ -1,4 +1,4 @@
-\@vuvko (`DNIWE :: a`{.verbatim}) and I had lots of fun this year
+\@vuvko (`DNIWE :: a`) and I had lots of fun this year
 participating in ICFPC. This is a writeup from my, \@abbradar\'s, side,
 and it focuses on the programming language part of the competition. I
 was mostly active during the second part of the competition.
@@ -39,8 +39,8 @@ implement. In the beginning, it was enough to encode and decode the
 string terms.
 
 The first interpreter was quickly written by ~~\@vuvko~~ ChatGPT in
-Python. It was enough to send a first request, `get index`{.verbatim},
-encoded `S'%4}).$%8`{.verbatim}, and receive a welcoming message:
+Python. It was enough to send a first request, `get index`,
+encoded `S'%4}).$%8`, and receive a welcoming message:
 
 ``` example
 SB%,,/}!.$}7%,#/-%}4/}4(%}M#(//,}/&}4(%}</5.$}P!2)!",%_~~<%&/2%}4!+).'}!}#/523%j}7%}35''%34}4(!4}9/5}(!6%}!},//+}!2/5.$l}S/5e2%}./7},//+).'}!4}4(%}u).$%8wl}N/}02!#4)#%}9/52}#/--5.)#!4)/.}3+),,3j}9/5}#!.}53%}/52}u%#(/w}3%26)#%l}@524(%2-/2%j}4/}+./7}(/7}9/5}!.$}/4(%2}345$%.43}!2%}$/).'j}9/5}#!.},//+}!4}4(%}u3#/2%"/!2$wl~~;&4%2},//+).'}!2/5.$j}9/5}-!9}"%}!$-)44%$}4/}9/52}&)234}#/523%3j}3/}-!+%}352%}4/}#(%#+}4()3}0!'%}&2/-}4)-%}4/}4)-%l}C.}4(%}-%!.4)-%j})&}9/5}7!.4}4/}02!#4)#%}-/2%}!$6!.#%$}#/--5.)#!4)/.}3+),,3j}9/5}-!9}!,3/}4!+%}/52}u,!.'5!'%y4%34wl
@@ -64,17 +64,17 @@ After passing some tests, you may be admitted to other courses, so make sure to 
 Both tasks also referenced the older ICFP contests of 2014 and 2009,
 respectively, and were simplified takes on both. Apart from that, we had
 a leaderboard and a language test. After running
-`get leaderboard`{.verbatim}, we found out we already got some points
-for the `hello`{.verbatim} task and more for calling the
-`echo`{.verbatim} service. The `language_test`{.verbatim} was ignored
+`get leaderboard`, we found out we already got some points
+for the `hello` task and more for calling the
+`echo` service. The `language_test` was ignored
 for now.
 
 Each course had several different numbered tasks ---
-`lambdaman`{.verbatim} had 21, and `spaceship`{.verbatim} 25. To remind
+`lambdaman` had 21, and `spaceship` 25. To remind
 you, we were communicating with programs, and each task needed to be
 executed to get the string with the actual assignment. Our initial
 interpreter struggled with executing more than half of the
-`lambdaman`{.verbatim} tasks, and there was still the language test. So,
+`lambdaman` tasks, and there was still the language test. So,
 while \@vuvko was focusing on the tasks themselves, I, who began
 actively participating closer to the end of the Lightning round, went to
 work on the interpreter.
@@ -87,7 +87,7 @@ easily mix and match Python, Bash, and later Haskell to try out new
 stuff. I then got to implement variables and lambda expressions, which
 we missed, along with some refactoring. Copilot and ChatGPT both greatly
 assist with these tasks. In half an hour, I had an interpreter which was
-able to decode most of the `lambdaman`{.verbatim} tasks. It was also
+able to decode most of the `lambdaman` tasks. It was also
 modular, so we could quickly add support for any new AST nodes. This was
 done because I had a hunch that after the Lightning round ends, the
 language might be updated, and we\'ll need to quickly modify its parts;
@@ -113,8 +113,8 @@ cache lambda argument computations but simulate the proper count.
 The new implementation allowed us to decode all the remaining tasks.
 After that I needed to leave, and when I returned, the lightning round
 had already ended. I checked the language spec, but noticed no changes.
-Two new tasks have been published: `3d`{.verbatim} and
-`efficiency`{.verbatim}. `efficiency`{.verbatim}\'s description
+Two new tasks have been published: `3d` and
+`efficiency`. `efficiency`\'s description
 immediately caught my attention: the task was to evaluate 13
 expressions, getting points for the answers. It implied either
 evaluation optimizations or analyzing the expressions. By the time I saw
@@ -153,25 +153,25 @@ e.g. if the answer to the second assignment is `42`, then send `solve efficiency
 
 ## Full round
 
-`efficiency1`{.verbatim} worked immediately. The next thing was to make
-the interpreter pass the `language_test`{.verbatim}, which now returned
-`unary # is not correct`{.verbatim}. After spending time to fix all the
+`efficiency1` worked immediately. The next thing was to make
+the interpreter pass the `language_test`, which now returned
+`unary # is not correct`. After spending time to fix all the
 issues I got:
 
 ``` example
 Self-check OK, send `solve language_test 4w3s0m3` to claim points for it
 ```
 
-It gave us the remaining points for the `hello`{.verbatim} task. I also
-took some time to implement binary `~`{.verbatim} and `!`{.verbatim}.
-Because the optimized `$`{.verbatim} is effectively `~`{.verbatim}, but
+It gave us the remaining points for the `hello` task. I also
+took some time to implement binary `~` and `!`.
+Because the optimized `$` is effectively `~`, but
 without the beta reductions count trick, it was easy to do.
 
-`efficiency2`{.verbatim} took some glancing at, but in the Haskell AST
+`efficiency2` took some glancing at, but in the Haskell AST
 representation, I noticed a multiplication of the whole slow-to-compute
 expression by zero and extracted the answer.
 
-`efficiency3`{.verbatim} is `efficiency2`{.verbatim} but without the
+`efficiency3` is `efficiency2` but without the
 zero shortcut. I couldn\'t, at first, pinpoint what happened there. The
 next idea was to turn an interpreter into a translator and retry
 evaluating plus adding optimizations, but I expected the organs to
@@ -181,7 +181,7 @@ that are both dynamic and have performant JITs: JavaScript and Lua.
 I quickly wrote a naive translator to JavaScript and ran the language
 test; it succeeded but returned a different string. Checking the code it
 appeared that it relied on 64-bit integers, which JavaScript doesn\'t
-fully support. I decided against `BigInteger`{.verbatim} as I expected
+fully support. I decided against `BigInteger` as I expected
 computationally heavy expressions. Because vanilla LuaJIT also doesn\'t
 support 64-bit integers, I decided to try out Julia instead, which is
 dynamic, has JIT, and supports the full range of integer types.
@@ -215,9 +215,9 @@ correct") "binary . is not correct") "binary T is not correct") "binary D is not
 correct") "application is not correct") "application is not correct"
 ```
 
-This immediately helped **a lot**; looking at `efficiency3`{.verbatim}
+This immediately helped **a lot**; looking at `efficiency3`
 now, I could spot that it\'s a simple recursive addition. In hindsight,
-`efficiency1`{.verbatim} threw me down the wrong optimization route,
+`efficiency1` threw me down the wrong optimization route,
 while the goal from the beginning was to sidestep the evaluation
 entirely. Which is clearly written in the task description!
 
@@ -225,7 +225,7 @@ I figured out the next expressions; ChatGPT helped greatly deduce the
 intent when fed the custom syntax. I have also implemented a parser for
 the syntax to make playing with expressions easier. Eventually, I solved
 4 to 6. Another thing to help was an optimizer, which rewrote the
-expressions to be more readable. I introduced a `Y`{.verbatim} binary
+expressions to be more readable. I introduced a `Y` binary
 function (the Y combinator) and a simple rewriter that detected it; it
 immediately improved the readability a lot.
 
@@ -233,28 +233,28 @@ I also implemented a let-float-out optimization, which moved the
 applications as high as possible in the expressions. It didn\'t help
 much.
 
-`efficiency7`{.verbatim} and `efficiency8`{.verbatim} looked similar ---
+`efficiency7` and `efficiency8` looked similar ---
 long lists of logical checks to find some number by iteration. ChatGPT
 quickly pointed out that the checks were on the number\'s bits. It was
 clearly a SAT task.
 
 I converted the logical check to an SMTLIB2 expression and got the
-answer to `efficiency7`{.verbatim}. `efficiency8`{.verbatim} was harder
+answer to `efficiency7`. `efficiency8` was harder
 as the first answer was wrong; I needed to write a Python script to
 search for all the possible solutions.
 
-`efficiency9`{.verbatim} to `efficiency11`{.verbatim} were similar
+`efficiency9` to `efficiency11` were similar
 expressions but with huge integers and operating on *nonary digits* of
-them. I needed to move my interpreter to `Integer`{.verbatim} from
-`Int`{.verbatim} to properly parse the expressions. I then converted the
+them. I needed to move my interpreter to `Integer` from
+`Int` to properly parse the expressions. I then converted the
 first one again to an SMTLIB2 expression, but it didn\'t finish the
 computation in any reasonable time.
 
-`efficiency12`{.verbatim} was a complex program to figure out. After
+`efficiency12` was a complex program to figure out. After
 some time and several tries to rewrite it, I gave up on it; I was tired
 at this point and didn\'t have much time left for the competition.
 
-Finally, `efficiency13`{.verbatim} OOMed when run. Analyzing it quickly
+Finally, `efficiency13` OOMed when run. Analyzing it quickly
 showed this was a huge string generator and an ineffective way of
 counting its length. Evaluating just the generator part worked quickly
 and the file size was my answer.
@@ -262,11 +262,11 @@ and the file size was my answer.
 Unfortunately, I didn\'t have time for the remaining ones, so here are
 the answers[^5]:
 
--   `efficiency9`{.verbatim} to `efficiency11`{.verbatim} turned out to
+-   `efficiency9` to `efficiency11` turned out to
     be Sudoku puzzles! I didn\'t figure this out at all, in part because
     of the board being encoded as integers. Obviously, nonary digits
     were a huge hint that I missed;
--   `efficiency12`{.verbatim} was a slow implementation of the phi
+-   `efficiency12` was a slow implementation of the phi
     function[^6].
 
 # The lessons
