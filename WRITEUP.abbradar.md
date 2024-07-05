@@ -236,7 +236,7 @@ much.
 `efficiency7` and `efficiency8` looked similar ---
 long lists of logical checks to find some number by iteration. ChatGPT
 quickly pointed out that the checks were on the number\'s bits. It was
-clearly a SAT task.
+clearly a SAT task, so I turned to Z3.
 
 I converted the logical check to an SMTLIB2 expression and got the
 answer to `efficiency7`. `efficiency8` was harder
